@@ -1,0 +1,35 @@
+{
+  "name": "2e-archives-of-nethys-scraper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "scrape": "ts-node index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bLittle1996/2e-archives-of-nethys-scraper.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bLittle1996/2e-archives-of-nethys-scraper/issues"
+  },
+  "homepage": "https://github.com/bLittle1996/2e-archives-of-nethys-scraper#readme",
+  "dependencies": {
+    "cheerio": "*",
+    "csv-parse": "^4.16.2",
+    "lodash": "^4.17.21",
+    "node-fetch": "^2.6.1",
+    "ts-node": "^10.2.1"
+  },
+  "devDependencies": {
+    "@types/csv-parse": "^1.2.2",
+    "@types/lodash": "^4.14.172",
+    "@types/node": "^16.7.6",
+    "@types/node-fetch": "^2.5.12",
+    "typescript": "^4.4.2"
+  }
+}
