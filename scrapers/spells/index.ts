@@ -12,6 +12,7 @@ type SpellData = SpellCSVEntry & {
   deities: string[];
   numberOfActions: ActionCost | ActionCost[];
   rawContentHtml: string;
+  spellComponents?: ('somatic' | 'verbal' | 'material')[];
 };
 
 export async function scrapeSpell(
@@ -48,12 +49,21 @@ export async function scrapeSpell(
     .find((el) => el.text() === 'Cast');
 
   const numberOfActions = getActionsFromImages(castLabel);
+  const spellComponents = castLabel
+    ?.nextUntil('hr, br')
+    .toArray()
+    .map(mapToCheerio)
+    .filter((el) => ['somatic', 'verbal', 'material'].includes(el.text()))
+    .map((el) => el.text().toLowerCase());
 
   return {
     bloodlines,
     deities,
     numberOfActions,
     rawContentHtml: spellPageDom(mainContentSelector).html() ?? '',
+    spellComponents: spellComponents?.length
+      ? (spellComponents as SpellData['spellComponents'])
+      : undefined,
   };
 }
 
