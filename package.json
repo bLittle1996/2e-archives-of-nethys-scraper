@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/bLittle1996/2e-archives-of-nethys-scraper#readme",
   "dependencies": {
-    "cheerio": "*",
+    "cheerio": "1.0.0-rc.10",
     "csv-parse": "^4.16.2",
     "lodash": "^4.17.21",
     "node-fetch": "^2.6.1",
