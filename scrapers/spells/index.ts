@@ -11,12 +11,13 @@ type SpellData = SpellCSVEntry & {
   bloodlines: Lowercase<string>[];
   deities: string[];
   numberOfActions: ActionCost | ActionCost[];
+  rawContentHtml: string;
 };
 
 export async function scrapeSpell(
   spellId: SpellCSVEntry['id']
 ): Promise<Omit<SpellData, keyof SpellCSVEntry>> {
-  const mainContentSelector = '#ctl00_MainContent_DetailedOutput';
+  const mainContentSelector = '[id*="MainContent_DetailedOutput"]';
   const spellPageDom = await scrape(`${spellUrl}?ID=${spellId}`);
 
   const bloodlineLabel = spellPageDom('b')
@@ -52,6 +53,7 @@ export async function scrapeSpell(
     bloodlines,
     deities,
     numberOfActions,
+    rawContentHtml: spellPageDom(mainContentSelector).html() ?? '',
   };
 }
 
@@ -61,7 +63,7 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
   let data: SpellData[] = [];
 
   for (const spellDataEntry of spellData.filter((spell) => spell.id === 484)) {
-    const enrichedData = await scrapeSpell(9669);
+    const enrichedData = await scrapeSpell(spellDataEntry.id);
     data = [
       ...data,
       {
