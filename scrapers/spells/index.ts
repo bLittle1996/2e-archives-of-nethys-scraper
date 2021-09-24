@@ -75,29 +75,23 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
   let data: SpellData[] = [];
 
   await task(`Scraping ${spellData.length} spells`, async ({ task }) => {
-    let tasks: AwaitedReturnType<typeof task>[] = [];
     for (const spellDataEntry of spellData.slice(0, 10)) {
       const taskTitle = `Scraping #${spellDataEntry.id}: ${spellDataEntry.name}`;
-      tasks = [
-        ...tasks,
-        await task(taskTitle, async ({ setTitle }) => {
-          setTitle(`${taskTitle} (Waiting)`);
-          await wait(1000); // wait 1 second between scrapes so we don't ddos any servers or something
-          setTitle(`${taskTitle} (Scraping)`);
-          const enrichedData = await scrapeSpell(spellDataEntry.id);
-          data = [
-            ...data,
-            {
-              ...spellDataEntry,
-              ...enrichedData,
-            },
-          ];
-          setTitle(`${taskTitle} (Done)`);
-        }),
-      ];
-    }
 
-    tasks.forEach((task) => task.clear());
+      const scrapeTask = await task(taskTitle, async () => {
+        await wait(1000); // wait 1 second between scrapes so we don't ddos any servers or something
+        const enrichedData = await scrapeSpell(spellDataEntry.id);
+        data = [
+          ...data,
+          {
+            ...spellDataEntry,
+            ...enrichedData,
+          },
+        ];
+      });
+
+      scrapeTask.clear();
+    }
   });
 
   return data;
