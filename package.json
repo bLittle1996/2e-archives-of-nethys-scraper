@@ -23,6 +23,7 @@
     "csv-parse": "^4.16.2",
     "lodash": "^4.17.21",
     "node-fetch": "^2.6.1",
+    "tasuku": "^1.0.2",
     "ts-node": "^10.2.1"
   },
   "devDependencies": {

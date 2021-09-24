@@ -2,7 +2,9 @@ import { Cheerio } from 'cheerio';
 import { flatten, uniq } from 'lodash';
 import { mapToCheerio } from '../../helpers/cheerio-utils';
 import { baseUrl, scrape } from '../../helpers/scrape';
-import { ActionCost } from '../../helpers/types';
+import { ActionCost, AwaitedReturnType } from '../../helpers/types';
+import { wait } from '../../helpers/utils';
+import task from 'tasuku';
 import { getSpellDataFromCSV, SpellCSVEntry } from './data';
 
 const spellUrl = `${baseUrl}/Spells.aspx` as const;
@@ -72,16 +74,31 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
 
   let data: SpellData[] = [];
 
-  for (const spellDataEntry of spellData.filter((spell) => spell.id === 484)) {
-    const enrichedData = await scrapeSpell(spellDataEntry.id);
-    data = [
-      ...data,
-      {
-        ...spellDataEntry,
-        ...enrichedData,
-      },
-    ];
-  }
+  await task(`Scraping ${spellData.length} spells`, async ({ task }) => {
+    let tasks: AwaitedReturnType<typeof task>[] = [];
+    for (const spellDataEntry of spellData.slice(0, 10)) {
+      const taskTitle = `Scraping #${spellDataEntry.id}: ${spellDataEntry.name}`;
+      tasks = [
+        ...tasks,
+        await task(taskTitle, async ({ setTitle }) => {
+          setTitle(`${taskTitle} (Waiting)`);
+          await wait(1000); // wait 1 second between scrapes so we don't ddos any servers or something
+          setTitle(`${taskTitle} (Scraping)`);
+          const enrichedData = await scrapeSpell(spellDataEntry.id);
+          data = [
+            ...data,
+            {
+              ...spellDataEntry,
+              ...enrichedData,
+            },
+          ];
+          setTitle(`${taskTitle} (Done)`);
+        }),
+      ];
+    }
+
+    tasks.forEach((task) => task.clear());
+  });
 
   return data;
 }
