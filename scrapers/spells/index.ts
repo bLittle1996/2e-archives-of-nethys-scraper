@@ -22,6 +22,7 @@ type SpellData = SpellCSVEntry & {
   range?: string;
   area?: string;
   targets?: string;
+  trigger?: string;
   savingThrow?: 'fortitude' | 'reflex' | 'will';
   isBasicSave?: boolean;
   rawContentHtml: string;
@@ -71,12 +72,14 @@ export async function scrapeSpell(
   const savingThrowText = basicSaveLink
     ? getNextSiblingTextNodeData(basicSaveLink)
     : getNextSiblingTextNodeData(savingThrowLabel);
+  const trigger = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Trigger'));
 
   return {
     bloodlines,
     deities,
     domains,
     numberOfActions,
+    trigger: trigger?.trim(),
     duration: duration?.trim(),
     range: range?.trim(),
     targets: targets?.trim().replace(/;$/, ''),
