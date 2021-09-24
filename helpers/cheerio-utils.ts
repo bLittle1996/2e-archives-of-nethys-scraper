@@ -17,7 +17,7 @@ export const findLabelWithText = (
 export const getNextSiblingTextNodeData = (
   el?: ReturnType<typeof mapToCheerio>
 ) => {
-  if (!el) return undefined;
+  if (!el || !el[0]) return undefined;
 
   const nextNode = el[0].next;
 
