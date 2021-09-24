@@ -1,10 +1,14 @@
 import { Cheerio } from 'cheerio';
 import { flatten, uniq } from 'lodash';
-import { mapToCheerio } from '../../helpers/cheerio-utils';
-import { baseUrl, scrape } from '../../helpers/scrape';
-import { ActionCost, AwaitedReturnType } from '../../helpers/types';
-import { wait } from '../../helpers/utils';
 import task from 'tasuku';
+import {
+  findLabelWithText,
+  getNextSiblingTextNodeData,
+  mapToCheerio,
+} from '../../helpers/cheerio-utils';
+import { baseUrl, scrape } from '../../helpers/scrape';
+import { ActionCost } from '../../helpers/types';
+import { wait } from '../../helpers/utils';
 import { getSpellDataFromCSV, SpellCSVEntry } from './data';
 
 const spellUrl = `${baseUrl}/Spells.aspx` as const;
@@ -12,8 +16,14 @@ const spellUrl = `${baseUrl}/Spells.aspx` as const;
 type SpellData = SpellCSVEntry & {
   bloodlines: Lowercase<string>[];
   deities: string[];
+  domains: string[];
   numberOfActions: ActionCost | ActionCost[];
   duration?: string;
+  range?: string;
+  area?: string;
+  targets?: string;
+  savingThrow?: 'fortitude' | 'reflex' | 'will';
+  isBasicSave?: boolean;
   rawContentHtml: string;
   spellComponents?: ('somatic' | 'verbal' | 'material')[];
 };
@@ -23,34 +33,28 @@ export async function scrapeSpell(
 ): Promise<Omit<SpellData, keyof SpellCSVEntry>> {
   const mainContentSelector = '[id*="MainContent_DetailedOutput"]';
   const spellPageDom = await scrape(`${spellUrl}?ID=${spellId}`);
-
-  const bloodlineLabel = spellPageDom('b')
-    .toArray()
-    .map(mapToCheerio)
-    .find((el) => el.text() === 'Bloodline');
   const bloodlines =
-    bloodlineLabel
+    findLabelWithText(spellPageDom, 'Bloodline')
       ?.nextUntil('br, hr', 'u')
       .toArray()
       .map(mapToCheerio)
       .filter((el) => el.find('a[href^="Bloodline.aspx"]'))
       .map((el) => el.text().toLowerCase()) ?? [];
   const deities =
-    spellPageDom('b')
-      .toArray()
-      .map(mapToCheerio)
-      .find((el) => el.text() === 'Deities')
+    findLabelWithText(spellPageDom, 'Deities')
       ?.nextUntil('br, hr', 'u')
       .toArray()
       .map(mapToCheerio)
       .filter((el) => el.find('a[href^="Deities.aspx"]'))
       .map((el) => el.text()) ?? [];
-
-  const castLabel = spellPageDom('b')
-    .toArray()
-    .map(mapToCheerio)
-    .find((el) => el.text() === 'Cast');
-
+  const domains =
+    findLabelWithText(spellPageDom, 'Domain')
+      ?.nextUntil('br, hr', 'u')
+      .toArray()
+      .map(mapToCheerio)
+      .filter((el) => el.find('a[href^="Domains.aspx"]'))
+      .map((el) => el.text()) ?? [];
+  const castLabel = findLabelWithText(spellPageDom, 'Cast');
   const numberOfActions = getActionsFromImages(castLabel);
   const spellComponents = castLabel
     ?.nextUntil('hr, br')
@@ -58,19 +62,27 @@ export async function scrapeSpell(
     .map(mapToCheerio)
     .filter((el) => ['somatic', 'verbal', 'material'].includes(el.text()))
     .map((el) => el.text().toLowerCase());
-
-  const duration = (
-    spellPageDom('b')
-      .toArray()
-      .map(mapToCheerio)
-      .find((el) => el.text() === 'Duration')?.[0].next as { data?: string }
-  )?.data;
+  const duration = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Duration'));
+  const range = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Range'));
+  const targets = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Targets'));
+  const area = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Targets'));
+  const savingThrowLabel = findLabelWithText(spellPageDom, 'Saving Throw');
+  const basicSaveLink = savingThrowLabel?.siblings('a[href="Rules.aspx?ID=329"]');
+  const savingThrowText = basicSaveLink
+    ? getNextSiblingTextNodeData(basicSaveLink)
+    : getNextSiblingTextNodeData(savingThrowLabel);
 
   return {
     bloodlines,
     deities,
+    domains,
     numberOfActions,
     duration: duration?.trim(),
+    range: range?.trim(),
+    targets: targets?.trim().replace(/;$/, ''),
+    area: area?.trim(),
+    savingThrow: savingThrowText?.trim().toLowerCase() as SpellData['savingThrow'],
+    isBasicSave: !!basicSaveLink,
     rawContentHtml: spellPageDom(mainContentSelector).html() ?? '',
     spellComponents: spellComponents?.length
       ? (spellComponents as SpellData['spellComponents'])
@@ -84,7 +96,7 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
   let data: SpellData[] = [];
 
   await task(`Scraping ${spellData.length} spells`, async ({ task }) => {
-    for (const spellDataEntry of spellData.filter((spell) => [12, 345, 69].includes(spell.id))) {
+    for (const spellDataEntry of spellData.filter((spell) => [428].includes(spell.id))) {
       const taskTitle = `Scraping #${spellDataEntry.id}: ${spellDataEntry.name}`;
 
       const scrapeTask = await task(taskTitle, async () => {
