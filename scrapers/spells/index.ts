@@ -13,6 +13,7 @@ type SpellData = SpellCSVEntry & {
   bloodlines: Lowercase<string>[];
   deities: string[];
   numberOfActions: ActionCost | ActionCost[];
+  duration?: string;
   rawContentHtml: string;
   spellComponents?: ('somatic' | 'verbal' | 'material')[];
 };
@@ -58,10 +59,18 @@ export async function scrapeSpell(
     .filter((el) => ['somatic', 'verbal', 'material'].includes(el.text()))
     .map((el) => el.text().toLowerCase());
 
+  const duration = (
+    spellPageDom('b')
+      .toArray()
+      .map(mapToCheerio)
+      .find((el) => el.text() === 'Duration')?.[0].next as { data?: string }
+  )?.data;
+
   return {
     bloodlines,
     deities,
     numberOfActions,
+    duration: duration?.trim(),
     rawContentHtml: spellPageDom(mainContentSelector).html() ?? '',
     spellComponents: spellComponents?.length
       ? (spellComponents as SpellData['spellComponents'])
@@ -75,7 +84,7 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
   let data: SpellData[] = [];
 
   await task(`Scraping ${spellData.length} spells`, async ({ task }) => {
-    for (const spellDataEntry of spellData.slice(0, 10)) {
+    for (const spellDataEntry of spellData.filter((spell) => [12, 345, 69].includes(spell.id))) {
       const taskTitle = `Scraping #${spellDataEntry.id}: ${spellDataEntry.name}`;
 
       const scrapeTask = await task(taskTitle, async () => {
