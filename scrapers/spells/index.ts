@@ -1,15 +1,15 @@
-import { Cheerio } from 'cheerio';
-import { flatten, uniq } from 'lodash';
-import task from 'tasuku';
+import { Cheerio } from "cheerio";
+import { flatten, uniq } from "lodash";
+import task from "tasuku";
 import {
   findLabelWithText,
   getNextSiblingTextNodeData,
   mapToCheerio,
-} from '../../helpers/cheerio-utils';
-import { baseUrl, scrape } from '../../helpers/scrape';
-import { ActionCost } from '../../helpers/types';
-import { wait } from '../../helpers/utils';
-import { getSpellDataFromCSV, SpellCSVEntry } from './data';
+} from "../../helpers/cheerio-utils";
+import { baseUrl, scrape } from "../../helpers/scrape";
+import { ActionCost } from "../../helpers/types";
+import { wait } from "../../helpers/utils";
+import { getSpellDataFromCSV, SpellCSVEntry } from "./data";
 
 const spellUrl = `${baseUrl}/Spells.aspx` as const;
 
@@ -23,56 +23,68 @@ type SpellData = SpellCSVEntry & {
   area?: string;
   targets?: string;
   trigger?: string;
-  savingThrow?: 'fortitude' | 'reflex' | 'will';
+  savingThrow?: "fortitude" | "reflex" | "will";
   isBasicSave?: boolean;
   rawContentHtml: string;
-  spellComponents?: ('somatic' | 'verbal' | 'material')[];
+  spellComponents?: ("somatic" | "verbal" | "material")[];
 };
 
 export async function scrapeSpell(
-  spellId: SpellCSVEntry['id']
+  spellId: SpellCSVEntry["id"]
 ): Promise<Omit<SpellData, keyof SpellCSVEntry>> {
   const mainContentSelector = '[id*="MainContent_DetailedOutput"]';
   const spellPageDom = await scrape(`${spellUrl}?ID=${spellId}`);
   const bloodlines =
-    findLabelWithText(spellPageDom, 'Bloodline')
-      ?.nextUntil('br, hr', 'u')
+    findLabelWithText(spellPageDom, "Bloodline")
+      ?.nextUntil("br, hr", "u")
       .toArray()
       .map(mapToCheerio)
       .filter((el) => el.find('a[href^="Bloodline.aspx"]'))
       .map((el) => el.text().toLowerCase()) ?? [];
   const deities =
-    findLabelWithText(spellPageDom, 'Deities')
-      ?.nextUntil('br, hr', 'u')
+    findLabelWithText(spellPageDom, "Deities")
+      ?.nextUntil("br, hr", "u")
       .toArray()
       .map(mapToCheerio)
       .filter((el) => el.find('a[href^="Deities.aspx"]'))
       .map((el) => el.text()) ?? [];
   const domains =
-    findLabelWithText(spellPageDom, 'Domain')
-      ?.nextUntil('br, hr', 'u')
+    findLabelWithText(spellPageDom, "Domain")
+      ?.nextUntil("br, hr", "u")
       .toArray()
       .map(mapToCheerio)
       .filter((el) => el.find('a[href^="Domains.aspx"]'))
       .map((el) => el.text()) ?? [];
-  const castLabel = findLabelWithText(spellPageDom, 'Cast');
+  const castLabel = findLabelWithText(spellPageDom, "Cast");
   const numberOfActions = getActionsFromImages(castLabel);
   const spellComponents = castLabel
-    ?.nextUntil('hr, br')
+    ?.nextUntil("hr, br")
     .toArray()
     .map(mapToCheerio)
-    .filter((el) => ['somatic', 'verbal', 'material'].includes(el.text()))
+    .filter((el) => ["somatic", "verbal", "material"].includes(el.text()))
     .map((el) => el.text().toLowerCase());
-  const duration = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Duration'));
-  const range = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Range'));
-  const targets = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Targets'));
-  const area = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Targets'));
-  const savingThrowLabel = findLabelWithText(spellPageDom, 'Saving Throw');
-  const basicSaveLink = savingThrowLabel?.siblings('a[href="Rules.aspx?ID=329"]');
+  const duration = getNextSiblingTextNodeData(
+    findLabelWithText(spellPageDom, "Duration")
+  );
+  const range = getNextSiblingTextNodeData(
+    findLabelWithText(spellPageDom, "Range")
+  );
+  const targets = getNextSiblingTextNodeData(
+    findLabelWithText(spellPageDom, "Targets")
+  );
+  const area = getNextSiblingTextNodeData(
+    findLabelWithText(spellPageDom, "Targets")
+  );
+  const savingThrowLabel = findLabelWithText(spellPageDom, "Saving Throw");
+  const basicSaveLink = savingThrowLabel?.siblings(
+    'a[href="Rules.aspx?ID=329"]'
+  );
   const savingThrowText = basicSaveLink
     ? getNextSiblingTextNodeData(basicSaveLink)
     : getNextSiblingTextNodeData(savingThrowLabel);
-  const trigger = getNextSiblingTextNodeData(findLabelWithText(spellPageDom, 'Trigger'));
+  const trigger = getNextSiblingTextNodeData(
+    findLabelWithText(spellPageDom, "Trigger")
+  );
 
   return {
     bloodlines,
@@ -82,24 +94,28 @@ export async function scrapeSpell(
     trigger: trigger?.trim(),
     duration: duration?.trim(),
     range: range?.trim(),
-    targets: targets?.trim().replace(/;$/, ''),
+    targets: targets?.trim().replace(/;$/, ""),
     area: area?.trim(),
-    savingThrow: savingThrowText?.trim().toLowerCase() as SpellData['savingThrow'],
+    savingThrow: savingThrowText
+      ?.trim()
+      .toLowerCase() as SpellData["savingThrow"],
     isBasicSave: !!basicSaveLink,
-    rawContentHtml: spellPageDom(mainContentSelector).html() ?? '',
+    rawContentHtml: spellPageDom(mainContentSelector).html() ?? "",
     spellComponents: spellComponents?.length
-      ? (spellComponents as SpellData['spellComponents'])
+      ? (spellComponents as SpellData["spellComponents"])
       : undefined,
   };
 }
 
 export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
-  const spellData = getSpellDataFromCSV().filter((spell) => !spell.isHeightened); // We don't want to include heightened spells, just the unheightened variant
+  const spellData = getSpellDataFromCSV().filter(
+    (spell) => !spell.isHeightened
+  ); // We don't want to include heightened spells, just the unheightened variant
 
   let data: SpellData[] = [];
 
   await task(`Scraping ${spellData.length} spells`, async ({ task }) => {
-    for (const spellDataEntry of spellData.filter((spell) => [428].includes(spell.id))) {
+    for (const spellDataEntry of spellData) {
       const taskTitle = `Scraping #${spellDataEntry.id}: ${spellDataEntry.name}`;
 
       const scrapeTask = await task(taskTitle, async () => {
@@ -121,34 +137,37 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
   return data;
 }
 
-function getActionsFromImages(castLabelDom?: Cheerio<any>): ActionCost | ActionCost[] {
+function getActionsFromImages(
+  castLabelDom?: Cheerio<any>
+): ActionCost | ActionCost[] {
   const numberOfActions = uniq(
     flatten(
       castLabelDom
         ?.nextUntil(
-          'hr, br',
+          "hr, br",
           'img[alt="Single Action"],img[alt="Two Actions"],img[alt="Three Actions"],img[alt="Reaction"],img[alt="Free Action"]'
         )
         .toArray()
         .map((el): ActionCost | ActionCost[] | undefined => {
           const { alt } = el.attribs;
           if (
-            alt === 'Single Action' &&
-            el.next?.type === 'text' &&
-            (el.next as { data?: string }).data === ' to ' &&
-            (el.next?.next as { attribs?: Record<string, any> })?.attribs?.alt === 'Three Actions'
+            alt === "Single Action" &&
+            el.next?.type === "text" &&
+            (el.next as { data?: string }).data === " to " &&
+            (el.next?.next as { attribs?: Record<string, any> })?.attribs
+              ?.alt === "Three Actions"
           ) {
-            return ['1A', '2A'];
-          } else if (alt === 'Single Action') {
-            return '1A';
-          } else if (alt === 'Two Actions') {
-            return '2A';
-          } else if (alt === 'Three Actions') {
-            return '3A';
-          } else if (alt === 'Free Action') {
-            return 'F';
-          } else if (alt === 'Reaction') {
-            return 'R';
+            return ["1A", "2A"];
+          } else if (alt === "Single Action") {
+            return "1A";
+          } else if (alt === "Two Actions") {
+            return "2A";
+          } else if (alt === "Three Actions") {
+            return "3A";
+          } else if (alt === "Free Action") {
+            return "F";
+          } else if (alt === "Reaction") {
+            return "R";
           }
         }) ?? []
     )
