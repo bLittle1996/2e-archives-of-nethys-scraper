@@ -9,6 +9,7 @@ export type Rarity = Lowercase<"Common" | "Uncommon" | "Rare">;
 export type Source =
   | "Core Rulebook"
   | "Advanced Player's Guide"
+  | "Secrets of Magic"
   | "Pathfinder #147: Tomorrow Must Burn"
   | "Legends"
   | "Gods & Magic"
