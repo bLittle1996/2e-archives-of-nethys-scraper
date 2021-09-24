@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "scrape": "ts-node index.ts"
+    "scrape": "ts-node index.ts",
+    "format": "prettier -w **/*.ts",
+    "format:dry": "prettier -c **/*.ts"
   },
   "repository": {
     "type": "git",
