@@ -26,7 +26,7 @@ export type SpellCSVEntry = {
 export const getSpellDataFromCSV = (): SpellCSVEntry[] => {
   // skip the first one since that's just column names.
   const [, ...rawSpellData]: string[] = readCsv(
-    resolve(__dirname, "..", "..", "csv-data", "spells.csv")
+    resolve(__dirname, "..", "..", "csv-data", "spells", "all-spells.csv")
   );
 
   return rawSpellData.map(

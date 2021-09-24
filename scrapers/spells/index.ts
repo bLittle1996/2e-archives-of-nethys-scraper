@@ -108,9 +108,7 @@ export async function scrapeSpell(
 }
 
 export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
-  const spellData = getSpellDataFromCSV().filter(
-    (spell) => !spell.isHeightened
-  ); // We don't want to include heightened spells, just the unheightened variant
+  const spellData = getSpellDataFromCSV();
 
   let data: SpellData[] = [];
 
