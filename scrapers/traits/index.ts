@@ -32,7 +32,7 @@ export const scrapeTraits = async (): Promise<Trait[]> => {
     const traits = await getAllTraits();
     let enrichedTraits: Trait[] = [];
 
-    for (const trait of traits.filter((t) => [123].includes(t.id))) {
+    for (const trait of traits) {
       const traitTask = await subTask(
         `Scraping description for trait #${trait.id}: ${trait.name}`,
         async () => {

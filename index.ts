@@ -10,4 +10,8 @@ import { scrapeTraits } from "./scrapers/traits";
 //     promisify(writeFile)(resolve(__dirname, "output", "spells.json"), jsonData)
 //   );
 
-scrapeTraits().then(console.log);
+scrapeTraits()
+  .then((data) => JSON.stringify(data))
+  .then((jsonData) =>
+    promisify(writeFile)(resolve(__dirname, "output", "traits.json"), jsonData)
+  );
