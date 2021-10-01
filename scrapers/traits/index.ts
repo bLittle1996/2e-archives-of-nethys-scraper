@@ -1,7 +1,11 @@
 import cheerio from "cheerio";
 import { ElementType } from "htmlparser2";
 import { last } from "lodash";
-import { mapToCheerio, TEXT_NODE } from "../../helpers/cheerio-utils";
+import {
+  mapToCheerio,
+  removeAllAttrs,
+  TEXT_NODE,
+} from "../../helpers/cheerio-utils";
 import {
   BASE_URL,
   mainContentSelector,
@@ -28,7 +32,7 @@ export const scrapeTraits = async (): Promise<Trait[]> => {
     const traits = await getAllTraits();
     let enrichedTraits: Trait[] = [];
 
-    for (const trait of traits.slice(0, 5)) {
+    for (const trait of traits.filter((t) => [123].includes(t.id))) {
       const traitTask = await subTask(
         `Scraping description for trait #${trait.id}: ${trait.name}`,
         async () => {
@@ -129,8 +133,8 @@ export const enrichTraitsWithDescription = async (
       if (el.nodeType === TEXT_NODE) {
         return (el as { data?: string }).data;
       }
-
-      return cheerio.html(el);
+      // just store the html element its wrapped in, removing all attributes except for the href (for future linking)
+      return cheerio.html(removeAllAttrs(cheerio(el), ["href"]));
     })
     .toArray()
     .join("");

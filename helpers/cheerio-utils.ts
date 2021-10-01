@@ -27,3 +27,22 @@ export const getNextSiblingTextNodeData = (
   if (nextNode?.type !== "text") return undefined;
   return (nextNode as { data?: string }).data;
 };
+
+export const removeAllAttrs = (
+  el: ReturnType<typeof mapToCheerio>,
+  whitelist: string[] = []
+) => {
+  // keep a record (well, a tuple) of attrs and their current values
+  const whitelistTuples: [string, string][] = whitelist
+    .filter((attr) => !!el.attr(attr))
+    .map((attr) => [attr, el.attr(attr) as string]);
+
+  // purge all attributes mwahahahaha
+  Object.keys(el.attr()).forEach((attr) => el.removeAttr(attr));
+  // add back the ones we want to keep
+  whitelistTuples.forEach((attrAndVal) => {
+    el.attr(...attrAndVal);
+  });
+
+  return el;
+};
