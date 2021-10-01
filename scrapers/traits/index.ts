@@ -1,6 +1,14 @@
-import { mapToCheerio } from "../../helpers/cheerio-utils";
-import { baseUrl, scrape } from "../../helpers/scrape";
-import { getPageId } from "../../helpers/utils";
+import cheerio from "cheerio";
+import { ElementType } from "htmlparser2";
+import { last } from "lodash";
+import { mapToCheerio, TEXT_NODE } from "../../helpers/cheerio-utils";
+import {
+  BASE_URL,
+  mainContentSelector,
+  scrape,
+  SCRAPE_DELAY,
+} from "../../helpers/scrape";
+import { getPageId, wait } from "../../helpers/utils";
 
 type Trait = {
   id: number;
@@ -12,14 +20,15 @@ type Trait = {
 
 type TraitWithoutDescription = Omit<Trait, "description">;
 
-const traitsUrl = `${baseUrl}/Traits.aspx` as const;
+const traitsUrl = `${BASE_URL}/Traits.aspx` as const;
 
 export const scrapeTraits = async (): Promise<Trait[]> => {
   const traits = await getAllTraits();
   let enrichedTraits: Trait[] = [];
 
-  for (const trait of traits) {
-    const enrichedTrait = enrichTraitsWithDescription(trait);
+  for (const trait of traits.slice(0, 5)) {
+    await wait(SCRAPE_DELAY);
+    const enrichedTrait = await enrichTraitsWithDescription(trait);
     enrichedTraits = [...enrichedTraits, enrichedTrait];
   }
 
@@ -36,7 +45,7 @@ export const getAllTraits = async (): Promise<TraitWithoutDescription[]> => {
       const traitId = getPageId(el.find("a").attr("href") ?? "") as number;
       const category = el
         .prevAll("h2") // grab all previous h2s that are siblings of this trait
-        .first() // the first sibling would be the one that is closest to the element
+        .first() // the first sibling would be the one that is closest to the element.
         .text()
         .replace(/\straits$/i, "")
         .toLowerCase();
@@ -78,6 +87,42 @@ export const getAllTraits = async (): Promise<TraitWithoutDescription[]> => {
   return traitsWithoutDescription;
 };
 
-export const enrichTraitsWithDescription = (
+export const enrichTraitsWithDescription = async (
   trait: TraitWithoutDescription
-): Trait => ({ ...trait, description: "" });
+): Promise<Trait> => {
+  const fallbackTrait = { ...trait, description: "" };
+  const html = await scrape(`${traitsUrl}?ID=${trait.id}`);
+  // contents() includes text nodes!!! (none of the find methods work the wy we want with the contents array tho so we need to use map/filter to do the work)
+  const mainContainer = html(mainContentSelector).contents();
+  const descriptionStartsIndex = Math.min(
+    ...mainContainer
+      .map((i, el) => (cheerio(el).is("br") ? i : Infinity))
+      .toArray()
+  );
+  const descriptionEndsIndex = Math.min(
+    ...mainContainer
+      .map((i, el) =>
+        cheerio(el).is("br, h2, hr") && i > descriptionStartsIndex
+          ? i
+          : Infinity
+      )
+      .toArray()
+  );
+  // iterate over every node from the start until the end...
+  const nodes = mainContainer.filter(
+    (i) => i > descriptionStartsIndex && i < descriptionEndsIndex
+  );
+
+  const description = nodes
+    .map((i, el) => {
+      if (el.nodeType === TEXT_NODE) {
+        return (el as { data?: string }).data;
+      }
+
+      return cheerio.html(el);
+    })
+    .toArray()
+    .join("");
+
+  return { ...trait, description };
+};

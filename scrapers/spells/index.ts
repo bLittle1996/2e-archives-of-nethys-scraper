@@ -6,12 +6,17 @@ import {
   getNextSiblingTextNodeData,
   mapToCheerio,
 } from "../../helpers/cheerio-utils";
-import { baseUrl, scrape } from "../../helpers/scrape";
+import {
+  BASE_URL,
+  mainContentSelector,
+  scrape,
+  SCRAPE_DELAY,
+} from "../../helpers/scrape";
 import { ActionCost } from "../../helpers/types";
 import { wait } from "../../helpers/utils";
 import { getSpellDataFromCSV, SpellCSVEntry } from "./data";
 
-const spellUrl = `${baseUrl}/Spells.aspx` as const;
+const spellUrl = `${BASE_URL}/Spells.aspx` as const;
 
 type SpellData = SpellCSVEntry & {
   bloodlines: Lowercase<string>[];
@@ -32,7 +37,6 @@ type SpellData = SpellCSVEntry & {
 export async function scrapeSpell(
   spellId: SpellCSVEntry["id"]
 ): Promise<Omit<SpellData, keyof SpellCSVEntry>> {
-  const mainContentSelector = '[id*="MainContent_DetailedOutput"]';
   const spellPageDom = await scrape(`${spellUrl}?ID=${spellId}`);
   const bloodlines =
     findLabelWithText(spellPageDom, "Bloodline")
@@ -117,7 +121,7 @@ export async function scrapeAllSpellsFromCSV(): Promise<SpellData[]> {
       const taskTitle = `Scraping #${spellDataEntry.id}: ${spellDataEntry.name}`;
 
       const scrapeTask = await task(taskTitle, async () => {
-        await wait(1000); // wait 1 second between scrapes so we don't ddos any servers or something
+        await wait(SCRAPE_DELAY); // wait between scrapes so we don't ddos any servers or something
         const enrichedData = await scrapeSpell(spellDataEntry.id);
         data = [
           ...data,
