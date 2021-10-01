@@ -9,6 +9,7 @@ import {
   SCRAPE_DELAY,
 } from "../../helpers/scrape";
 import { getPageId, wait } from "../../helpers/utils";
+import task from "tasuku";
 
 type Trait = {
   id: number;
@@ -23,16 +24,26 @@ type TraitWithoutDescription = Omit<Trait, "description">;
 const traitsUrl = `${BASE_URL}/Traits.aspx` as const;
 
 export const scrapeTraits = async (): Promise<Trait[]> => {
-  const traits = await getAllTraits();
-  let enrichedTraits: Trait[] = [];
+  const traits = await task("Scraping traits", async ({ task: subTask }) => {
+    const traits = await getAllTraits();
+    let enrichedTraits: Trait[] = [];
 
-  for (const trait of traits.slice(0, 5)) {
-    await wait(SCRAPE_DELAY);
-    const enrichedTrait = await enrichTraitsWithDescription(trait);
-    enrichedTraits = [...enrichedTraits, enrichedTrait];
-  }
+    for (const trait of traits.slice(0, 5)) {
+      const traitTask = await subTask(
+        `Scraping description for trait #${trait.id}: ${trait.name}`,
+        async () => {
+          await wait(SCRAPE_DELAY);
+          const enrichedTrait = await enrichTraitsWithDescription(trait);
+          enrichedTraits = [...enrichedTraits, enrichedTrait];
+        }
+      );
+      traitTask.clear();
+    }
 
-  return enrichedTraits;
+    return enrichedTraits;
+  });
+
+  return traits.result;
 };
 
 export const getAllTraits = async (): Promise<TraitWithoutDescription[]> => {
