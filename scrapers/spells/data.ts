@@ -17,7 +17,7 @@ export type SpellCSVEntry = {
   pfsLegality?: PFSLegality;
   isCantrip: boolean;
   isFocusSpell: boolean;
-  isHeightened: boolean;
+  isHeightenable: boolean;
   summary: string;
   traditions: SpellTradition[];
   source: Source;
@@ -72,7 +72,7 @@ export const getSpellDataFromCSV = (): SpellCSVEntry[] => {
         isFocusSpell: isFocus === "True",
         level: +level,
         summary,
-        isHeightened: heightened === "True",
+        isHeightenable: heightened === "True",
         source: sourceDom.text() as Source,
       };
     }
