@@ -14,7 +14,7 @@ import {
 } from "../../helpers/scrape";
 import { ActionCost } from "../../helpers/types";
 import { wait } from "../../helpers/utils";
-import { getSpellDataFromCSV, SpellCSVEntry } from "./data";
+import { getSpellDataFromCSV, SpellCSVEntry } from "./csv-data";
 
 const spellUrl = `${BASE_URL}/Spells.aspx` as const;
 
